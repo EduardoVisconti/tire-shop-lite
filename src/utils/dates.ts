@@ -1,30 +1,30 @@
-import { addDays, differenceInDays, parseISO, startOfDay } from "date-fns";
+import { addDays, differenceInDays, parseISO, startOfDay } from 'date-fns';
 
 /**
  * Parse seguro de "yyyy-MM-dd" -> Date
  * Se vier vazio ou inválido, retorna null.
  */
 export function safeParseDate(value?: string): Date | null {
-  if (!value) return null;
-  try {
-    const d = parseISO(value);
-    return isNaN(d.getTime()) ? null : d;
-  } catch {
-    return null;
-  }
+	if (!value) return null;
+	try {
+		const d = parseISO(value);
+		return isNaN(d.getTime()) ? null : d;
+	} catch {
+		return null;
+	}
 }
 
 /**
  * Calcula nextServiceDate (yyyy-MM-dd) usando lastServiceDate + intervalo
  */
 export function computeNextServiceDate(
-  lastServiceDate: string,
-  intervalDays: number
+	lastServiceDate: string,
+	intervalDays: number
 ): string {
-  const base = safeParseDate(lastServiceDate);
-  if (!base) return "";
-  const next = addDays(base, intervalDays);
-  return next.toISOString().slice(0, 10);
+	const base = safeParseDate(lastServiceDate); // transforma em Date ou retorna null
+	if (!base) return '';
+	const next = addDays(base, intervalDays); // soma X dias na data (exemplo: 180 dias)
+	return next.toISOString().slice(0, 10); // toISOString() retorna "yyyy-MM-ddTHH:mm:ss.sssZ", fatiamos só a parte da data com slice(0,10)
 }
 
 /**
@@ -35,18 +35,42 @@ export function computeNextServiceDate(
  * - unknown: não dá pra calcular
  */
 export function getDueState(nextServiceDate?: string): {
-  state: "overdue" | "due_soon" | "ok" | "unknown";
-  daysDelta?: number;
+	state: 'overdue' | 'due_soon' | 'ok' | 'unknown';
+	daysDelta?: number;
 } {
-  const next = safeParseDate(nextServiceDate);
-  if (!next) return { state: "unknown" };
+	const next = safeParseDate(nextServiceDate);
+	if (!next) return { state: 'unknown' };
 
-  const today = startOfDay(new Date());
-  const nextDay = startOfDay(next);
+	const today = startOfDay(new Date());
+	const nextDay = startOfDay(next);
 
-  const daysDelta = differenceInDays(nextDay, today);
+	const daysDelta = differenceInDays(nextDay, today);
 
-  if (daysDelta < 0) return { state: "overdue", daysDelta };
-  if (daysDelta <= 30) return { state: "due_soon", daysDelta };
-  return { state: "ok", daysDelta };
+	if (daysDelta < 0) return { state: 'overdue', daysDelta };
+	if (daysDelta <= 30) return { state: 'due_soon', daysDelta };
+	return { state: 'ok', daysDelta };
+}
+
+/**
+ * Retorna o estado operacional de manutenção baseado no nextServiceDate.
+ * Regras:
+ * - overdue: nextServiceDate < hoje
+ * - due_soon: nextServiceDate entre hoje e +30 dias
+ * - ok: acima de 30 dias
+ */
+export function getMaintenanceState(
+	nextServiceDate: string
+): 'overdue' | 'due_soon' | 'ok' {
+	const today = new Date();
+	const startOfToday = new Date(today.toDateString());
+
+	const next = new Date(`${nextServiceDate}T00:00:00`);
+	const time = next.getTime();
+
+	const in30 = new Date(startOfToday);
+	in30.setDate(in30.getDate() + 30);
+
+	if (time < startOfToday.getTime()) return 'overdue';
+	if (time <= in30.getTime()) return 'due_soon';
+	return 'ok';
 }
