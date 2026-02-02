@@ -1,6 +1,7 @@
 import { useVehicles } from '../hooks/use-vehicles';
 import { VehicleList } from '../components/VehicleList';
 import { VehicleForm } from '../components/VehicleForm';
+import { ServiceForm } from '../components/ServiceForm';
 
 export default function Home() {
 	const { vehicles, isLoading, isError } = useVehicles();
@@ -15,16 +16,33 @@ export default function Home() {
 				</p>
 			</header>
 
-			<section className='space-y-3'>
-				<h2 className='text-lg font-semibold'>Veículos</h2>
-				<VehicleForm />
-				{isLoading ? (
-					<p className='text-sm text-gray-600'>Carregando...</p>
-				) : isError ? (
-					<p className='text-sm text-red-600'>Erro ao carregar veículos.</p>
-				) : (
-					<VehicleList vehicles={vehicles} />
-				)}
+			<section className='space-y-4'>
+				<div className='rounded-lg border p-4 space-y-3'>
+					<h2 className='text-lg font-semibold'>Cadastrar veículo</h2>
+					<VehicleForm />
+				</div>
+
+				<div className='rounded-lg border p-4 space-y-3'>
+					<h2 className='text-lg font-semibold'>
+						Registrar serviço (histórico)
+					</h2>
+					<ServiceForm />
+				</div>
+
+				<div className='rounded-lg border p-4 space-y-3'>
+					<div className='flex items-center justify-between'>
+						<h2 className='text-lg font-semibold'>Lista de veículos</h2>
+						<p className='text-xs text-gray-500'>{vehicles.length} total</p>
+					</div>
+
+					{isLoading ? (
+						<p className='text-sm text-gray-600'>Carregando...</p>
+					) : isError ? (
+						<p className='text-sm text-red-600'>Erro ao carregar veículos.</p>
+					) : (
+						<VehicleList vehicles={vehicles} />
+					)}
+				</div>
 			</section>
 		</main>
 	);
