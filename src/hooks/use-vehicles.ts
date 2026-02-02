@@ -50,6 +50,10 @@ export function useVehicles() {
 		onSuccess: async () => {
 			// força atualizar a lista
 			await queryClient.invalidateQueries({ queryKey: VEHICLES_KEY });
+		},
+		onError: () => {
+			// aqui depois a gente troca por toast na UI
+			console.error('Failed to create vehicle');
 		}
 	});
 
@@ -68,6 +72,9 @@ export function useVehicles() {
 		onSuccess: async () => {
 			// atualiza a lista (pq lastServiceDate e nextServiceDate mudaram)
 			await queryClient.invalidateQueries({ queryKey: VEHICLES_KEY });
+		},
+		onError: () => {
+			console.error('Failed to add service record');
 		}
 	});
 
@@ -77,11 +84,16 @@ export function useVehicles() {
 		isLoading: vehiclesQuery.isLoading,
 		isError: vehiclesQuery.isError,
 
-		// actions
+		// actions (sync-style)
 		createVehicle: createVehicleMutation.mutate,
-		isCreating: createVehicleMutation.isPending,
-
 		addService: addServiceMutation.mutate,
+
+		// actions (async-style - bom pra UI/UX)
+		createVehicleAsync: createVehicleMutation.mutateAsync,
+		addServiceAsync: addServiceMutation.mutateAsync,
+
+		// status
+		isCreating: createVehicleMutation.isPending,
 		isAddingService: addServiceMutation.isPending
 	};
 }
