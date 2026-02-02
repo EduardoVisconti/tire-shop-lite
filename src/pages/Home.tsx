@@ -1,5 +1,6 @@
 import { useVehicles } from '../hooks/use-vehicles';
 import { VehicleList } from '../components/VehicleList';
+import { VehicleForm } from '../components/VehicleForm';
 
 export default function Home() {
 	const { vehicles, isLoading, isError } = useVehicles();
@@ -16,7 +17,7 @@ export default function Home() {
 
 			<section className='space-y-3'>
 				<h2 className='text-lg font-semibold'>Veículos</h2>
-
+				<VehicleForm />
 				{isLoading ? (
 					<p className='text-sm text-gray-600'>Carregando...</p>
 				) : isError ? (
