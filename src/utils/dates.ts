@@ -8,7 +8,7 @@ export function safeParseDate(value?: string): Date | null {
 	if (!value) return null;
 	try {
 		const d = parseISO(value);
-		return isNaN(d.getTime()) ? null : d;
+		return Number.isNaN(d.getTime()) ? null : d;
 	} catch {
 		return null;
 	}
@@ -21,10 +21,10 @@ export function computeNextServiceDate(
 	lastServiceDate: string,
 	intervalDays: number
 ): string {
-	const base = safeParseDate(lastServiceDate); // transforma em Date ou retorna null
+	const base = safeParseDate(lastServiceDate);
 	if (!base) return '';
-	const next = addDays(base, intervalDays); // soma X dias na data (exemplo: 180 dias)
-	return next.toISOString().slice(0, 10); // toISOString() retorna "yyyy-MM-ddTHH:mm:ss.sssZ", fatiamos só a parte da data com slice(0,10)
+	const next = addDays(base, intervalDays);
+	return next.toISOString().slice(0, 10);
 }
 
 /**
@@ -49,28 +49,4 @@ export function getDueState(nextServiceDate?: string): {
 	if (daysDelta < 0) return { state: 'overdue', daysDelta };
 	if (daysDelta <= 30) return { state: 'due_soon', daysDelta };
 	return { state: 'ok', daysDelta };
-}
-
-/**
- * Retorna o estado operacional de manutenção baseado no nextServiceDate.
- * Regras:
- * - overdue: nextServiceDate < hoje
- * - due_soon: nextServiceDate entre hoje e +30 dias
- * - ok: acima de 30 dias
- */
-export function getMaintenanceState(
-	nextServiceDate: string
-): 'overdue' | 'due_soon' | 'ok' {
-	const today = new Date();
-	const startOfToday = new Date(today.toDateString());
-
-	const next = new Date(`${nextServiceDate}T00:00:00`);
-	const time = next.getTime();
-
-	const in30 = new Date(startOfToday);
-	in30.setDate(in30.getDate() + 30);
-
-	if (time < startOfToday.getTime()) return 'overdue';
-	if (time <= in30.getTime()) return 'due_soon';
-	return 'ok';
 }
