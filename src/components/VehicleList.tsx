@@ -1,5 +1,5 @@
 import type { Vehicle } from '../types/vehicle';
-import { StatusBadge } from './StatusBage';
+import { StatusBadge } from './StatusBadge';
 
 function vehicleStatusLabel(status: Vehicle['status']) {
 	if (status === 'active') return 'Active';
