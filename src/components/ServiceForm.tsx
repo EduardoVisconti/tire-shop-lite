@@ -5,7 +5,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from 'date-fns';
 
 import { useVehicles } from '../hooks/use-vehicles';
-import type { ServiceRecord } from '../types/service';
 
 /* -------------------------
    Schema (regras do form)
@@ -46,7 +45,7 @@ export function ServiceForm() {
 		addService({
 			vehicleId: values.vehicleId,
 			date: values.date,
-			type: values.type as ServiceRecord['type'],
+			type: values.type,
 			notes: values.notes?.trim() || undefined
 		});
 
@@ -85,7 +84,7 @@ export function ServiceForm() {
 				</p>
 
 				{vehicles.length === 0 && (
-					<p className='mt-1 text-xs text-muted-foreground'>
+					<p className='mt-1 text-xs text-gray-500'>
 						Crie um veículo primeiro para registrar serviços.
 					</p>
 				)}
