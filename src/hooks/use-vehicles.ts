@@ -15,9 +15,9 @@ const VEHICLES_KEY = ['vehicles'] as const;
 
 /**
  * Hook central:
- * - ler vehicles (query)
+ * - ler vehicles (estado atual)
  * - criar vehicle (mutation)
- * - adicionar service (mutation)
+ * - adicionar service (histórico) + atualizar estado atual (mutation)
  * - invalidar cache para atualizar UI
  */
 export function useVehicles() {
@@ -29,7 +29,7 @@ export function useVehicles() {
 	const vehiclesQuery = useQuery<Vehicle[]>({
 		queryKey: VEHICLES_KEY,
 		queryFn: async () => {
-			// localStorage é síncrono, mas deixamos async pra manter padrão
+			// localStorage é síncrono, mas mantemos async pra padrão de hooks
 			return listVehicles();
 		}
 	});
@@ -48,11 +48,10 @@ export function useVehicles() {
 			return createVehicle(input);
 		},
 		onSuccess: async () => {
-			// força atualizar a lista
+			// atualiza a lista
 			await queryClient.invalidateQueries({ queryKey: VEHICLES_KEY });
 		},
 		onError: () => {
-			// aqui depois a gente troca por toast na UI
 			console.error('Failed to create vehicle');
 		}
 	});
@@ -69,9 +68,14 @@ export function useVehicles() {
 		}) => {
 			return addServiceToVehicle(input);
 		},
-		onSuccess: async () => {
+		onSuccess: async (_data, variables) => {
 			// atualiza a lista (pq lastServiceDate e nextServiceDate mudaram)
 			await queryClient.invalidateQueries({ queryKey: VEHICLES_KEY });
+
+			// atualiza o histórico do veículo selecionado (Home usa essa queryKey)
+			await queryClient.invalidateQueries({
+				queryKey: ['services', variables.vehicleId]
+			});
 		},
 		onError: () => {
 			console.error('Failed to add service record');

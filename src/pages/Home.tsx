@@ -1,10 +1,39 @@
+import { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+
 import { useVehicles } from '../hooks/use-vehicles';
 import { VehicleList } from '../components/VehicleList';
 import { VehicleForm } from '../components/VehicleForm';
 import { ServiceForm } from '../components/ServiceForm';
 
+import { listServicesByVehicle } from '../data/vehicles';
+import type { ServiceRecord } from '../types/service';
+
+function serviceTypeLabel(type: ServiceRecord['type']) {
+	return type === 'preventive' ? 'Preventive' : 'Corrective';
+}
+
 export default function Home() {
 	const { vehicles, isLoading, isError } = useVehicles();
+
+	// veículo selecionado para ver histórico
+	const [selectedVehicleId, setSelectedVehicleId] = useState('');
+
+	const selectedVehicle = useMemo(() => {
+		return vehicles.find((v) => v.id === selectedVehicleId) ?? null;
+	}, [vehicles, selectedVehicleId]);
+
+	/**
+	 * READ do histórico (services) do veículo selecionado
+	 * enabled só roda quando tiver id selecionado
+	 */
+	const servicesQuery = useQuery<ServiceRecord[]>({
+		queryKey: ['services', selectedVehicleId],
+		queryFn: async () => listServicesByVehicle(selectedVehicleId),
+		enabled: Boolean(selectedVehicleId)
+	});
+
+	const services = servicesQuery.data ?? [];
 
 	return (
 		<main className='mx-auto max-w-3xl p-6 space-y-6'>
@@ -41,6 +70,73 @@ export default function Home() {
 						<p className='text-sm text-red-600'>Erro ao carregar veículos.</p>
 					) : (
 						<VehicleList vehicles={vehicles} />
+					)}
+				</div>
+
+				{/* Histórico (services) */}
+				<div className='rounded-lg border p-4 space-y-3'>
+					<h2 className='text-lg font-semibold'>Histórico de serviços</h2>
+
+					<div className='grid gap-2'>
+						<label className='text-sm font-medium'>Escolha um veículo</label>
+
+						<select
+							className='w-full rounded border px-3 py-2'
+							value={selectedVehicleId}
+							onChange={(e) => setSelectedVehicleId(e.target.value)}
+							disabled={vehicles.length === 0}
+						>
+							<option value=''>Selecione...</option>
+							{vehicles.map((v) => (
+								<option
+									key={v.id}
+									value={v.id}
+								>
+									{v.name} ({v.plate})
+								</option>
+							))}
+						</select>
+
+						{vehicles.length === 0 && (
+							<p className='text-xs text-gray-500'>
+								Crie um veículo para visualizar histórico.
+							</p>
+						)}
+					</div>
+
+					{!selectedVehicle ? (
+						<p className='text-sm text-gray-600'>
+							Selecione um veículo para ver o histórico.
+						</p>
+					) : servicesQuery.isLoading ? (
+						<p className='text-sm text-gray-600'>Carregando histórico...</p>
+					) : servicesQuery.isError ? (
+						<p className='text-sm text-red-600'>
+							Erro ao carregar histórico desse veículo.
+						</p>
+					) : services.length === 0 ? (
+						<div className='rounded-lg border border-dashed p-6 text-sm text-gray-600'>
+							Nenhum serviço registrado para <b>{selectedVehicle.name}</b>.
+						</div>
+					) : (
+						<div className='space-y-2'>
+							{services.map((s) => (
+								<div
+									key={s.id}
+									className='rounded-md border p-3'
+								>
+									<div className='flex items-center justify-between gap-3'>
+										<p className='font-medium'>{s.date}</p>
+										<p className='text-xs text-gray-600'>
+											{serviceTypeLabel(s.type)}
+										</p>
+									</div>
+									<p className='text-sm text-gray-700 mt-1'>
+										{s.notes?.trim() ? s.notes : '—'}
+									</p>
+								</div>
+							))}
+						</div>
 					)}
 				</div>
 			</section>

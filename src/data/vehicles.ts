@@ -29,7 +29,7 @@ function safeJsonParse<T>(raw: string | null, fallback: T): T {
 }
 
 /* -----------------------------
-   Read / Write: Vehicles
+   Read / Write: Vehicles (estado atual)
 ------------------------------ */
 
 export function listVehicles(): Vehicle[] {
@@ -54,14 +54,28 @@ export function saveServices(services: ServiceRecord[]): void {
 	localStorage.setItem(SERVICES_KEY, JSON.stringify(services));
 }
 
+/**
+ * Retorna SOMENTE os services de um veículo específico (histórico filtrado).
+ * Ordenado por date desc (mais recente primeiro).
+ */
+export function listServicesByVehicle(vehicleId: string): ServiceRecord[] {
+	const services = listServices();
+
+	const filtered = services.filter((s) => s.vehicleId === vehicleId);
+
+	// yyyy-MM-dd funciona bem pra ordenar como string
+	filtered.sort((a, b) => (a.date < b.date ? 1 : -1));
+
+	return filtered;
+}
+
 /* -----------------------------
    Mutations (ações de negócio)
-   - aqui é onde a lógica “de verdade” começa a aparecer
 ------------------------------ */
 
 /**
  * Cria um veículo (estado atual).
- * - nextServiceDate é derivado (não depende do usuário digitar)
+ * - nextServiceDate é derivado
  */
 export function createVehicle(input: {
 	name: string;
@@ -72,7 +86,6 @@ export function createVehicle(input: {
 }): Vehicle {
 	const vehicles = listVehicles();
 
-	// id simples pro mini-projeto
 	const id = crypto.randomUUID();
 
 	const nextServiceDate = computeNextServiceDate(
@@ -90,6 +103,7 @@ export function createVehicle(input: {
 		nextServiceDate
 	};
 
+	// novo em cima (mais recente primeiro)
 	saveVehicles([vehicle, ...vehicles]);
 
 	return vehicle;
@@ -110,7 +124,7 @@ export function addServiceToVehicle(input: {
 	date: string; // yyyy-MM-dd
 	type: ServiceRecord['type'];
 	notes?: string;
-}): { updatedVehicle: Vehicle } {
+}): { updatedVehicle: Vehicle; createdService: ServiceRecord } {
 	const vehicles = listVehicles();
 	const services = listServices();
 
@@ -146,5 +160,5 @@ export function addServiceToVehicle(input: {
 	saveServices([service, ...services]);
 	saveVehicles(nextVehicles);
 
-	return { updatedVehicle };
+	return { updatedVehicle, createdService: service };
 }
