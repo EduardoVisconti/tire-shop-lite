@@ -5,33 +5,24 @@ import type { ServiceRecord } from '../types/service';
 import {
 	listVehicles,
 	createVehicle,
-	addServiceToVehicle
+	addServiceToVehicle,
+	resetDemoData
 } from '../data/vehicles';
 
 /**
- * Query keys (padrão previsível)
+ * Query keys
  */
 const VEHICLES_KEY = ['vehicles'] as const;
 
-/**
- * Hook central:
- * - ler vehicles (estado atual)
- * - criar vehicle (mutation)
- * - adicionar service (histórico) + atualizar estado atual (mutation)
- * - invalidar cache para atualizar UI
- */
 export function useVehicles() {
 	const queryClient = useQueryClient();
 
 	/**
-	 * READ: lista de vehicles (estado atual)
+	 * READ: vehicles (estado atual)
 	 */
 	const vehiclesQuery = useQuery<Vehicle[]>({
 		queryKey: VEHICLES_KEY,
-		queryFn: async () => {
-			// localStorage é síncrono, mas mantemos async pra padrão de hooks
-			return listVehicles();
-		}
+		queryFn: async () => listVehicles()
 	});
 
 	/**
@@ -44,15 +35,9 @@ export function useVehicles() {
 			status: Vehicle['status'];
 			lastServiceDate: string;
 			serviceIntervalDays: number;
-		}) => {
-			return createVehicle(input);
-		},
+		}) => createVehicle(input),
 		onSuccess: async () => {
-			// atualiza a lista
 			await queryClient.invalidateQueries({ queryKey: VEHICLES_KEY });
-		},
-		onError: () => {
-			console.error('Failed to create vehicle');
 		}
 	});
 
@@ -65,39 +50,44 @@ export function useVehicles() {
 			date: string;
 			type: ServiceRecord['type'];
 			notes?: string;
-		}) => {
-			return addServiceToVehicle(input);
-		},
+		}) => addServiceToVehicle(input),
 		onSuccess: async (_data, variables) => {
-			// atualiza a lista (pq lastServiceDate e nextServiceDate mudaram)
+			// atualiza lista de vehicles (estado atual)
 			await queryClient.invalidateQueries({ queryKey: VEHICLES_KEY });
 
-			// atualiza o histórico do veículo selecionado (Home usa essa queryKey)
+			// atualiza o histórico do veículo selecionado (se estiver aberto)
 			await queryClient.invalidateQueries({
 				queryKey: ['services', variables.vehicleId]
 			});
+		}
+	});
+
+	/**
+	 * WRITE: reset demo data
+	 */
+	const resetMutation = useMutation({
+		mutationFn: async () => {
+			resetDemoData();
 		},
-		onError: () => {
-			console.error('Failed to add service record');
+		onSuccess: async () => {
+			// invalida tudo que depende do storage
+			await queryClient.invalidateQueries({ queryKey: VEHICLES_KEY });
+			await queryClient.invalidateQueries({ queryKey: ['services'] });
 		}
 	});
 
 	return {
-		// data
 		vehicles: vehiclesQuery.data ?? [],
 		isLoading: vehiclesQuery.isLoading,
 		isError: vehiclesQuery.isError,
 
-		// actions (sync-style)
 		createVehicle: createVehicleMutation.mutate,
-		addService: addServiceMutation.mutate,
-
-		// actions (async-style - bom pra UI/UX)
-		createVehicleAsync: createVehicleMutation.mutateAsync,
-		addServiceAsync: addServiceMutation.mutateAsync,
-
-		// status
 		isCreating: createVehicleMutation.isPending,
-		isAddingService: addServiceMutation.isPending
+
+		addService: addServiceMutation.mutate,
+		isAddingService: addServiceMutation.isPending,
+
+		resetDemo: resetMutation.mutate,
+		isResetting: resetMutation.isPending
 	};
 }

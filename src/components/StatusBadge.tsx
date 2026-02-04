@@ -1,5 +1,5 @@
 import type { Vehicle } from '../types/vehicle';
-import { getDueState } from '../utils/dates';
+import { formatDaysDeltaLabel, getDueState } from '../utils/dates';
 
 /**
  * Badge simples para mostrar o estado de manutenção baseado em nextServiceDate:
@@ -7,9 +7,11 @@ import { getDueState } from '../utils/dates';
  * - due_soon
  * - ok
  * - unknown
+ *
+ * Agora também mostra os dias (ex: "Overdue • 3d late")
  */
 export function StatusBadge({ vehicle }: { vehicle: Vehicle }) {
-	const due = getDueState(vehicle.nextServiceDate);
+	const { state, daysDelta } = getDueState(vehicle.nextServiceDate);
 
 	const map = {
 		overdue: 'bg-red-100 text-red-700 border-red-200',
@@ -25,21 +27,19 @@ export function StatusBadge({ vehicle }: { vehicle: Vehicle }) {
 		unknown: 'Unknown'
 	} as const;
 
-	// opcional: mostrar quantos dias faltam/atrasou
-	const suffix =
-		typeof due.daysDelta === 'number'
-			? due.daysDelta < 0
-				? ` (${Math.abs(due.daysDelta)}d late)`
-				: ` (${due.daysDelta}d)`
-			: '';
+	const deltaLabel = formatDaysDeltaLabel(state, daysDelta);
 
 	return (
 		<span
-			className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium ${map[due.state]}`}
-			title='Status baseado no nextServiceDate'
+			className={`inline-flex items-center gap-2 rounded-md border px-2 py-0.5 text-xs font-medium ${map[state]}`}
+			title={
+				vehicle.nextServiceDate
+					? `Next: ${vehicle.nextServiceDate}`
+					: 'Sem data'
+			}
 		>
-			{label[due.state]}
-			{suffix}
+			{label[state]}
+			{deltaLabel ? <span className='opacity-80'>• {deltaLabel}</span> : null}
 		</span>
 	);
 }

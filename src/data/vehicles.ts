@@ -29,7 +29,7 @@ function safeJsonParse<T>(raw: string | null, fallback: T): T {
 }
 
 /* -----------------------------
-   Read / Write: Vehicles (estado atual)
+   Read / Write: Vehicles
 ------------------------------ */
 
 export function listVehicles(): Vehicle[] {
@@ -45,38 +45,38 @@ export function saveVehicles(vehicles: Vehicle[]): void {
    Read / Write: Services (histórico)
 ------------------------------ */
 
-export function listServices(): ServiceRecord[] {
+export function listServices(vehicleId?: string): ServiceRecord[] {
 	const raw = localStorage.getItem(SERVICES_KEY);
-	return safeJsonParse<ServiceRecord[]>(raw, []);
+	const all = safeJsonParse<ServiceRecord[]>(raw, []);
+
+	// se não passar vehicleId, devolve tudo
+	if (!vehicleId) return all;
+
+	// filtra só do veículo
+	return all.filter((s) => s.vehicleId === vehicleId);
 }
 
 export function saveServices(services: ServiceRecord[]): void {
 	localStorage.setItem(SERVICES_KEY, JSON.stringify(services));
 }
 
+/* -----------------------------
+   Reset (demo)
+------------------------------ */
+
 /**
- * Retorna SOMENTE os services de um veículo específico (histórico filtrado).
- * Ordenado por date desc (mais recente primeiro).
+ * Limpa completamente os dados do demo.
+ * (isso é uma "mutation" simples)
  */
-export function listServicesByVehicle(vehicleId: string): ServiceRecord[] {
-	const services = listServices();
-
-	const filtered = services.filter((s) => s.vehicleId === vehicleId);
-
-	// yyyy-MM-dd funciona bem pra ordenar como string
-	filtered.sort((a, b) => (a.date < b.date ? 1 : -1));
-
-	return filtered;
+export function resetDemoData(): void {
+	localStorage.removeItem(VEHICLES_KEY);
+	localStorage.removeItem(SERVICES_KEY);
 }
 
 /* -----------------------------
    Mutations (ações de negócio)
 ------------------------------ */
 
-/**
- * Cria um veículo (estado atual).
- * - nextServiceDate é derivado
- */
 export function createVehicle(input: {
 	name: string;
 	plate: string;
@@ -103,28 +103,17 @@ export function createVehicle(input: {
 		nextServiceDate
 	};
 
-	// novo em cima (mais recente primeiro)
 	saveVehicles([vehicle, ...vehicles]);
 
 	return vehicle;
 }
 
-/**
- * Adiciona um service record (histórico) e atualiza o estado atual do vehicle.
- *
- * Fluxo (igual AssetOps):
- * 1) cria ServiceRecord (histórico)
- * 2) atualiza Vehicle (estado atual):
- *    - lastServiceDate
- *    - nextServiceDate (recalcula)
- * 3) salva tudo
- */
 export function addServiceToVehicle(input: {
 	vehicleId: string;
 	date: string; // yyyy-MM-dd
 	type: ServiceRecord['type'];
 	notes?: string;
-}): { updatedVehicle: Vehicle; createdService: ServiceRecord } {
+}): { updatedVehicle: Vehicle } {
 	const vehicles = listVehicles();
 	const services = listServices();
 
@@ -160,5 +149,5 @@ export function addServiceToVehicle(input: {
 	saveServices([service, ...services]);
 	saveVehicles(nextVehicles);
 
-	return { updatedVehicle, createdService: service };
+	return { updatedVehicle };
 }

@@ -8,7 +8,7 @@ export function safeParseDate(value?: string): Date | null {
 	if (!value) return null;
 	try {
 		const d = parseISO(value);
-		return Number.isNaN(d.getTime()) ? null : d;
+		return isNaN(d.getTime()) ? null : d;
 	} catch {
 		return null;
 	}
@@ -33,6 +33,10 @@ export function computeNextServiceDate(
  * - due_soon: 0..30 dias
  * - ok: mais que 30 dias
  * - unknown: não dá pra calcular
+ *
+ * daysDelta:
+ * - negativo = atrasado (ex: -3)
+ * - positivo = faltam X dias (ex: 12)
  */
 export function getDueState(nextServiceDate?: string): {
 	state: 'overdue' | 'due_soon' | 'ok' | 'unknown';
@@ -49,4 +53,26 @@ export function getDueState(nextServiceDate?: string): {
 	if (daysDelta < 0) return { state: 'overdue', daysDelta };
 	if (daysDelta <= 30) return { state: 'due_soon', daysDelta };
 	return { state: 'ok', daysDelta };
+}
+
+/**
+ * Helper de UI:
+ * transforma daysDelta em texto curto pro badge.
+ * Ex:
+ * - overdue + -3 => "3d late"
+ * - due_soon + 12 => "in 12d"
+ * - ok + 45 => "in 45d"
+ * - unknown => ""
+ */
+export function formatDaysDeltaLabel(
+	state: 'overdue' | 'due_soon' | 'ok' | 'unknown',
+	daysDelta?: number
+): string {
+	if (state === 'unknown') return '';
+	if (typeof daysDelta !== 'number') return '';
+
+	const abs = Math.abs(daysDelta);
+
+	if (state === 'overdue') return `${abs}d late`;
+	return `in ${abs}d`;
 }
